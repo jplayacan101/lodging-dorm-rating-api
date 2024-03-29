@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from 'src/typeorm/entities/User';
@@ -26,11 +26,40 @@ export class UsersService {
         return user;
     }
 
+    // async create(createUserDto: CreateUserDto): Promise<User> {
+    //     // Hash the password before saving the user
+    //     const hashedPassword = await bcrypt.hash(createUserDto.Password, 10); // Hash password with bcrypt
+    //     const newUser = this.userRepository.create({ ...createUserDto, Password: hashedPassword }); // Include hashed password in the user object
+    //     return await this.userRepository.save(newUser);
+    // }
     async create(createUserDto: CreateUserDto): Promise<User> {
-        // Hash the password before saving the user
-        const hashedPassword = await bcrypt.hash(createUserDto.Password, 10); // Hash password with bcrypt
-        const newUser = this.userRepository.create({ ...createUserDto, Password: hashedPassword }); // Include hashed password in the user object
-        return await this.userRepository.save(newUser);
+        // Check if the email already exists
+        const existingEmailUser = await this.userRepository.findOne({ where: { Email: createUserDto.Email } });
+        if (existingEmailUser) {
+          throw new ConflictException('Email already exists');
+        }
+    
+        // Check if the username already exists
+        const existingUsernameUser = await this.userRepository.findOne({ where: { Username: createUserDto.Username } });
+        if (existingUsernameUser) {
+          throw new ConflictException('Username already exists');
+        }
+
+        // Check if the username already exists
+        const existingPhoneNumber = await this.userRepository.findOne({ where: { Phone: createUserDto.Phone } });
+        if (existingPhoneNumber) {
+          throw new ConflictException('Phone number already exists');
+        }
+    
+        try {
+          // Hash the password before saving the user
+          const hashedPassword = await bcrypt.hash(createUserDto.Password, 10); // Hash password with bcrypt
+          const newUser = this.userRepository.create({ ...createUserDto, Password: hashedPassword }); // Include hashed password in the user object
+          return await this.userRepository.save(newUser);
+        } catch (error) {
+          // Handle other errors
+          throw new Error('Failed to create user');
+        }
     }
 
     async update(id: number, updateUserDto: UpdateUserDto): Promise<User> {
