@@ -12,10 +12,18 @@ export class DormitoryImagesService {
         private readonly dormitoryImageRepository: Repository<DormitoryImage>,
     ) {}
 
+    // async create(createDormitoryImageDto: CreateDormitoryImageDto): Promise<DormitoryImage> {
+    //     const newDormitoryImage = this.dormitoryImageRepository.create(createDormitoryImageDto);
+    //     return await this.dormitoryImageRepository.save(newDormitoryImage);
+    // }
     async create(createDormitoryImageDto: CreateDormitoryImageDto): Promise<DormitoryImage> {
-        const newDormitoryImage = this.dormitoryImageRepository.create(createDormitoryImageDto);
-        return await this.dormitoryImageRepository.save(newDormitoryImage);
+        const newDormitoryImage = new DormitoryImage();
+        Object.assign(newDormitoryImage, createDormitoryImageDto);
+        const dormitoryImage = await this.dormitoryImageRepository.save(newDormitoryImage);
+
+        return dormitoryImage
     }
+
 
     async findAll(): Promise<DormitoryImage[]> {
         return await this.dormitoryImageRepository.find();
@@ -31,8 +39,10 @@ export class DormitoryImagesService {
 
     async update(id: number, updateDormitoryImageDto: UpdateDormitoryImageDto): Promise<DormitoryImage> {
         const dormitoryImage = await this.findOne(id);
-        this.dormitoryImageRepository.merge(dormitoryImage, updateDormitoryImageDto);
-        return await this.dormitoryImageRepository.save(dormitoryImage);
+        Object.assign(dormitoryImage, updateDormitoryImageDto);
+        await this.dormitoryImageRepository.save(dormitoryImage);
+
+        return dormitoryImage
     }
 
     async remove(id: number): Promise<void> {

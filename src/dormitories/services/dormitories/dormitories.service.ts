@@ -1,17 +1,22 @@
+
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Dormitory } from 'src/typeorm/entities/Dormitory';
-import { SearchDormitoryDto } from 'src/dormitories/dtos/SearchDormitory.dto';
-import { ListDormitoryDto } from 'src/dormitories/dtos/ListDormitory.dto';
 import { CreateDormitoryDto } from 'src/dormitories/dtos/CreateDormitory.dto';
 import { UpdateDormitoryDto } from 'src/dormitories/dtos/UpdateDormitory.dto';
+import { ListDormitoryDto } from 'src/dormitories/dtos/ListDormitory.dto';
+import { DormitoryImage } from 'src/typeorm/entities/DormitoryImage';
+import { CreateDormitoryImageDto } from 'src/dormitory-images/dtos/CreateDormitoryImage.dto';
+import { DormitoryImagesService } from 'src/dormitory-images/services/dormitory-images/dormitory-images.service';
+import { SearchDormitoryDto } from 'src/dormitories/dtos/SearchDormitory.dto';
 
 @Injectable()
 export class DormitoriesService {
     constructor(
         @InjectRepository(Dormitory)
         private readonly dormitoryRepository: Repository<Dormitory>,
+        private readonly dormitoryImagesService: DormitoryImagesService, // Inject DormitoryImagesService
     ) {}
 
     async findAll(searchDto: SearchDormitoryDto): Promise<ListDormitoryDto[]> {
@@ -49,41 +54,98 @@ export class DormitoriesService {
         }));
     }
 
-    async create(createDormitoryDto: CreateDormitoryDto): Promise<ListDormitoryDto> {
+
+    // async create(createDormitoryDto: CreateDormitoryDto, createDormitoryImageDto: CreateDormitoryImageDto): Promise<ListDormitoryDto> {
+    //     const newDormitory = new Dormitory();
+    //     Object.assign(newDormitory, createDormitoryDto);
+    //     const dormitory = await this.dormitoryRepository.save(newDormitory);
+
+    //     // Create dormitory image
+    //     await this.dormitoryImagesService.create({...createDormitoryImageDto, DormID: dormitory.DormID});
+
+    //     return {
+    //         DormID: dormitory.DormID,
+    //         Name: dormitory.Name,
+    //         Address: dormitory.Address,
+    //         Amenities: dormitory.Amenities,
+    //         AverageRating: dormitory.AverageRating,
+    //         Price: dormitory.Price,
+    //         DistanceFromCampus: dormitory.DistanceFromCampus
+    //     };
+    // }
+    async create(createDormitoryDto: CreateDormitoryDto, createDormitoryImageDto: CreateDormitoryImageDto): Promise<ListDormitoryDto> {
         const newDormitory = new Dormitory();
         Object.assign(newDormitory, createDormitoryDto);
-        await this.dormitoryRepository.save(newDormitory);
-        return {
-            DormID: newDormitory.DormID,
-            Name: newDormitory.Name,
-            Address: newDormitory.Address,
-            Amenities: newDormitory.Amenities,
-            AverageRating: newDormitory.AverageRating,
-            Price: newDormitory.Price,
-            DistanceFromCampus: newDormitory.DistanceFromCampus
-        };
+
+        // Coordinates of the campus
+        const campusLatitude = 14.646365427923756;
+        const campusLongitude = 121.07702858156227;
+
+        // Coordinates of the dormitory
+        const dormLatitude = createDormitoryDto.Latitude;
+        const dormLongitude = createDormitoryDto.Longitude;
+
+        // Calculate distance from campus using Haversine formula
+        const distanceFromCampus = this.calculateDistance(campusLatitude, campusLongitude, dormLatitude, dormLongitude);
+
+        // Set the distance to the dormitory entity
+        newDormitory.DistanceFromCampus = distanceFromCampus;
+
+        // Save dormitory entity
+        const dormitory = await this.dormitoryRepository.save(newDormitory);
+
+        // Create dormitory image
+        await this.dormitoryImagesService.create({...createDormitoryImageDto, DormID: dormitory.DormID});
+
+        return dormitory;
     }
 
-    async update(id: number, updateDormitoryDto: UpdateDormitoryDto): Promise<ListDormitoryDto> {
-        const dormitory = await this.dormitoryRepository.findOneBy({ DormID: id });
+    // Function to calculate distance using Haversine formula
+    private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+        const R = 6371.0; // Earth radius in kilometers
+
+        const dLat = this.toRadians(lat2 - lat1);
+        const dLon = this.toRadians(lon2 - lon1);
+
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos(this.toRadians(lat1)) * Math.cos(this.toRadians(lat2)) *
+                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const distance = R * c;
+
+        return distance;
+    }
+
+    // Function to convert degrees to radians
+    private toRadians(degrees: number): number {
+        return degrees * (Math.PI / 180);
+    }
+
+    async update(id: number, updateDormitoryDto: UpdateDormitoryDto, createDormitoryImageDto: CreateDormitoryImageDto): Promise<ListDormitoryDto> {
+        const dormitory = await this.dormitoryRepository.findOne({ where: { DormID: id } });
         if (!dormitory) {
             throw new NotFoundException(`Dormitory with id ${id} not found`);
         }
-        const updatedDormitory = Object.assign(dormitory, updateDormitoryDto);
-        await this.dormitoryRepository.save(updatedDormitory);
+        Object.assign(dormitory, updateDormitoryDto);
+        await this.dormitoryRepository.save(dormitory);
+
+        // Update or create dormitory image
+        await this.dormitoryImagesService.update(id, createDormitoryImageDto);
+
         return {
-            DormID: updatedDormitory.DormID,
-            Name: updatedDormitory.Name,
-            Address: updatedDormitory.Address,
-            Amenities: updatedDormitory.Amenities,
-            AverageRating: updatedDormitory.AverageRating,
-            Price: updatedDormitory.Price,
-            DistanceFromCampus: updatedDormitory.DistanceFromCampus
+            DormID: dormitory.DormID,
+            Name: dormitory.Name,
+            Address: dormitory.Address,
+            Amenities: dormitory.Amenities,
+            AverageRating: dormitory.AverageRating,
+            Price: dormitory.Price,
+            DistanceFromCampus: dormitory.DistanceFromCampus
         };
     }
 
     async delete(id: number): Promise<void> {
-        const dormitory = await this.dormitoryRepository.findOneBy({ DormID: id });
+        const dormitory = await this.dormitoryRepository.findOne({ where: { DormID: id } });
         if (!dormitory) {
             throw new NotFoundException(`Dormitory with id ${id} not found`);
         }

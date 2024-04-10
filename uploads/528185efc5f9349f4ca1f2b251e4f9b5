@@ -1,0 +1,40 @@
+# Lab5_Layacan_code
+
+This code calculates Manhattan distances between 3D points. 
+It takes input for the number of test cases, the number of points in each test case, and the coordinates of these points. 
+Then, it computes the Manhattan distances between consecutive points and outputs these distances.
+
+## How to Run the Code
+
+To run the code:
+
+1. Compile the code:
+    ```
+    g++ -o Lab5_Layacan_code Lab5_Layacan_code.cpp 
+    ```
+
+2. Run the compiled executable:
+    ```
+    ./Lab5_Layacan_code
+    ```
+
+3.  Generate .S File
+    ```
+    g++ -S -o Lab5_Layacan_code.S Lab5_Layacan_code.cpp
+    ```
+
+Sample Input:
+2
+3
+5 5 5
+10 10 10
+12 13 14
+2
+9 1 7
+10 2 8
+
+Sample Output
+15
+9
+
+3

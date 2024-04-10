@@ -27,8 +27,8 @@ export class DormitoryImagesController {
 
     @Put(':id')
     @UseGuards(JwtAuthGuard)
-    async update(@Param('id') id: string, @Body() updateDormitoryImageDto: UpdateDormitoryImageDto): Promise<DormitoryImage> {
-        return await this.dormitoryImagesService.update(+id, updateDormitoryImageDto);
+    async update(@Param('id') id: string, @Body() createDormitoryImageDto: CreateDormitoryImageDto): Promise<DormitoryImage> {
+        return await this.dormitoryImagesService.update(+id, createDormitoryImageDto);
     }
 
     @Delete(':id')

@@ -13,7 +13,7 @@ export class DormitoryImage {
     @Column()
     UserID: number;
 
-    @Column({ length: 255 })
+    @Column({ type: 'longtext' })
     ImageURL: string;
 
     @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
